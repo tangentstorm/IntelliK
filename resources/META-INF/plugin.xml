@@ -25,7 +25,8 @@
   -->
 
   <extensions defaultExtensionNs="com.intellij">
-    <fileTypeFactory implementation="com.x1010data.intellik.KFileTypeFactory"/>
+      <fileTypeFactory implementation="com.x1010data.intellik.KFileTypeFactory"/>
+      <lang.parserDefinition language="K" implementationClass="com.x1010data.intellik.KParserDefinition"/>
   </extensions>
 
   <actions>

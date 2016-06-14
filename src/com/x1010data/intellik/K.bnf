@@ -1,0 +1,19 @@
+{
+    parserClass="com.x1010data.intellik.parser.KParser"
+    extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+    psiClassPrefix="K"
+    psiImplClassSuffix="Impl"
+    psiPackage="com.x1010data.psi"
+    psiImplPackage="com.x1010data.intellik.psi.impl"
+
+    elementTypeHolderClass="com.x1010data.intellik.psi.KTypes"
+    elementTypeClass="com.x1010data.intellik.psi.KElementType"
+    tokenTypeClass="com.x1010data.intellik.psi.KTokenType"
+}
+
+kFile ::= stmt *
+
+expr ::= INT
+
+stmt ::= (expr (SEMI expr)*) ? COMMENT?
