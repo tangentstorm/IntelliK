@@ -12,8 +12,31 @@
     tokenTypeClass="com.x1010data.intellik.psi.KTokenType"
 }
 
-kFile ::= stmt *
+top ::= kModule
+kModule ::= (kLine | kCmd | NEWLINE) *
+kCmd ::= COMMAND expr? COMMENT? NEWLINE
+kLine ::= stmts COMMENT? NEWLINE
+stmts ::= (stmt (SEMI stmt)*)?
+block ::= kModule stmts // so we can have stuff on the last line, before the end brace/bracket/whatever
+stmt ::= assign | expr | empty | ifStmt | doStmt | whileStmt
+assign ::= lvalue COLON expr
+expr ::= value? (op+ expr?)? | LPAREN expr RPAREN
+op ::= PRIM | BUILTIN
+value ::= lvalue | ((lambda | noun) tail?)
+lvalue ::= IDENT tail*
+lambda ::= LBRACE sig? block RBRACE
+sig ::= LBRACK (IDENT (SEMI IDENT)*)? RBRACK
+noun ::= STRING | (num+) | (SYM+) | list | dict
+num ::= INT | RAT
+list ::= LPAREN exprs RPAREN
+dict ::= DOT LPAREN entry* RPAREN
+entry ::= LPAREN expr SEMI expr (SEMI expr)? RPAREN
+tail ::= attr | index | ADV
+attr ::= DOT IDENT
+index ::= LBRACK exprs RBRACK
+exprs ::= expr? (SEMI expr)*
+empty ::= // empty statement
+ifStmt ::= IF LBRACK block RBRACK
+doStmt ::= DO LBRACK block RBRACK
+whileStmt ::= WHILE LBRACK block RBRACK
 
-expr ::= INT
-
-stmt ::= (expr (SEMI expr)*) ? COMMENT?

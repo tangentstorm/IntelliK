@@ -17,8 +17,21 @@ import java.util.Map;
 public class KColorSettingsPage implements ColorSettingsPage {
 
     private static final AttributesDescriptor[] DESCRIPTORS = new AttributesDescriptor[] {
-            new AttributesDescriptor("Comment", KSyntaxHighlighter.COMMENT),
-            new AttributesDescriptor("NUMBER", KSyntaxHighlighter.NUMBER)
+            new AttributesDescriptor("Comments", KSyntaxHighlighter.COMMENT),
+            new AttributesDescriptor("Numbers", KSyntaxHighlighter.NUMBER),
+            new AttributesDescriptor("Strings", KSyntaxHighlighter.STRING),
+            new AttributesDescriptor("Identifiers", KSyntaxHighlighter.IDENT),
+            new AttributesDescriptor("Symbols", KSyntaxHighlighter.SYMBOL),
+            new AttributesDescriptor("Primitives", KSyntaxHighlighter.PRIM),
+            new AttributesDescriptor("Braces", KSyntaxHighlighter.BRACE),
+            new AttributesDescriptor("Brackets", KSyntaxHighlighter.BRACK),
+            new AttributesDescriptor("Parens", KSyntaxHighlighter.PAREN),
+            new AttributesDescriptor("Builtins", KSyntaxHighlighter.BUILTIN),
+            new AttributesDescriptor("Keywords", KSyntaxHighlighter.KEYWORD),
+            new AttributesDescriptor("Adverbs", KSyntaxHighlighter.ADVERB),
+            new AttributesDescriptor("Commands", KSyntaxHighlighter.ADVERB),
+            new AttributesDescriptor("Semicolons", KSyntaxHighlighter.SEMI),
+            new AttributesDescriptor("Dot", KSyntaxHighlighter.DOT),
     };
 
     @Nullable
