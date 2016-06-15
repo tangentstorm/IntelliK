@@ -29,7 +29,7 @@ public class KColorSettingsPage implements ColorSettingsPage {
             new AttributesDescriptor("Builtins", KSyntaxHighlighter.BUILTIN),
             new AttributesDescriptor("Keywords", KSyntaxHighlighter.KEYWORD),
             new AttributesDescriptor("Adverbs", KSyntaxHighlighter.ADVERB),
-            new AttributesDescriptor("Commands", KSyntaxHighlighter.ADVERB),
+            new AttributesDescriptor("Commands", KSyntaxHighlighter.COMMAND),
             new AttributesDescriptor("Semicolons", KSyntaxHighlighter.SEMI),
             new AttributesDescriptor("Dot", KSyntaxHighlighter.DOT),
     };

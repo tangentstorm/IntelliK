@@ -13,8 +13,7 @@
 }
 
 top ::= kModule
-kModule ::= (kLine | kCmd | NEWLINE) *
-kCmd ::= COMMAND expr? COMMENT? NEWLINE
+kModule ::= (kLine | COMMAND | NEWLINE) *
 kLine ::= stmts COMMENT? NEWLINE
 stmts ::= (stmt (SEMI stmt)*)?
 block ::= kModule stmts // so we can have stuff on the last line, before the end brace/bracket/whatever

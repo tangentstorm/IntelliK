@@ -22,8 +22,8 @@ Nat        = {Digit}+
 
 WHITESPACE = [\ \t\f]
 NEWLINE    = \n|\r|\r\n
-COMMAND    = \\ [0?':.bcdve\\ilmprts_tw]
-COMMENT    = "/"[^\r\n]*
+COMMENT    = "/" [^\r\n]* {NEWLINE}
+COMMAND    = "\\"[^\r\n]* ({COMMENT}|{NEWLINE})
 SEMI       = ";"
 COLON      = ":"
 DOT        = "."
@@ -33,8 +33,8 @@ LBRACE     = "{"
 RBRACE     = "}"
 LBRACK     = "["
 RBRACK     = "]"
-PRIM       = [~!@#$%\^&*+-<>|,?] ":"? // semi, colon, dot are also primitives, but handled specially
-ADV        = ['/\\] ":" ?
+PRIM       = [~!@#$%\^&*+\-<>|,?] ":"? // semi, colon, dot are also primitives, but handled specially
+ADV        = "'" | "':" | "/:" | "\\:"
 INT        = "-"? {Nat}
 RAT        = {INT}\.{Nat}
 BUILTIN    = "_" ("bin"|"di"|"dv"|"dvl"|"draw"|"gtime"|"ic"|"ci"|"jd"|"dj"|"lsq"|"dot"|"mul"|"inv"|"in"|"lin"
@@ -74,11 +74,12 @@ SYM        = "`" ({IDENT} | {STRING})?
 {INT}                                      { yybegin(INLINE); return KTypes.INT; }
 {RAT}                                      { yybegin(INLINE); return KTypes.RAT; }
 
-{ADV}                                      { yybegin(INLINE); return KTypes.ADV; }
+{ADV}                                      { return KTypes.ADV; }
+<INLINE> "/"                               { return KTypes.ADV; }
+<INLINE> "\\"                              { return KTypes.ADV; }
+<YYINITIAL> {COMMENT}                      { return KTypes.COMMENT; }
+<YYINITIAL> {COMMAND}                      { return KTypes.COMMAND; }
 
-<YYINITIAL> {COMMENT}                      { yybegin(YYINITIAL); return KTypes.COMMENT; }
-
-{COMMAND}                                  { yybegin(YYINITIAL); return KTypes.COMMAND; }
 {NEWLINE}                                  { yybegin(YYINITIAL); return TokenType.WHITE_SPACE; }
 {WHITESPACE}                               { yybegin(YYINITIAL); return TokenType.WHITE_SPACE; }
-.                                          { return TokenType.BAD_CHARACTER; }
+.                                          { yybegin(YYINITIAL); return TokenType.BAD_CHARACTER; }
