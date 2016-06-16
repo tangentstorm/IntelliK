@@ -42,7 +42,7 @@ public class KParserDefinition implements ParserDefinition {
 
     @Override
     public IFileElementType getFileNodeType() {
-        return null;
+        return FILE;
     }
 
     @NotNull

@@ -4,38 +4,41 @@
 
     psiClassPrefix="K"
     psiImplClassSuffix="Impl"
-    psiPackage="com.x1010data.psi"
+    psiPackage="com.x1010data.intellik.psi"
     psiImplPackage="com.x1010data.intellik.psi.impl"
 
     elementTypeHolderClass="com.x1010data.intellik.psi.KTypes"
     elementTypeClass="com.x1010data.intellik.psi.KElementType"
     tokenTypeClass="com.x1010data.intellik.psi.KTokenType"
+
+    psiImplUtilClass="com.x1010data.intellik.psi.impl.KPsiImpUtil"
 }
 
-top ::= kModule
-kModule ::= (kLine | COMMAND | NEWLINE) *
-kLine ::= stmts COMMENT? NEWLINE
-stmts ::= (stmt (SEMI stmt)*)?
-block ::= kModule stmts // so we can have stuff on the last line, before the end brace/bracket/whatever
-stmt ::= assign | expr | empty | ifStmt | doStmt | whileStmt
+kFile ::= kItem*
+kItem ::= (kLine | kCmd | NEWLINE)
+kCmd  ::= COMMAND COMMENT? NEWLINE
+kLine ::= stmts? COMMENT? NEWLINE
+stmts ::= stmt (SEMI stmt)*
+block ::= kItem* stmts? // so we can have stuff on the last line, before the end brace/bracket/whatever
+stmt ::= ifStmt | doStmt | whileStmt | assign | expr | // last is empty statement
 assign ::= lvalue COLON expr
-expr ::= value? (op+ expr?)? | LPAREN expr RPAREN
-op ::= PRIM | BUILTIN
-value ::= lvalue | ((lambda | noun) tail?)
-lvalue ::= IDENT tail*
+expr ::= (amend | cond | value | op+ | LPAREN expr RPAREN | ADV)*
+op ::= (PRIM | BUILTIN | DOT | COLON | MINUS | IDENT) tail
+value ::= lvalue | ((lambda | noun) tail)
+lvalue ::= IDENT tail
 lambda ::= LBRACE sig? block RBRACE
 sig ::= LBRACK (IDENT (SEMI IDENT)*)? RBRACK
 noun ::= STRING | (num+) | (SYM+) | list | dict
-num ::= INT | RAT
-list ::= LPAREN exprs RPAREN
+num ::= MINUS? (INT | RAT)
+list ::= LPAREN block RPAREN
 dict ::= DOT LPAREN entry* RPAREN
 entry ::= LPAREN expr SEMI expr (SEMI expr)? RPAREN
-tail ::= attr | index | ADV
+tail ::= (attr | index | ADV)*
 attr ::= DOT IDENT
-index ::= LBRACK exprs RBRACK
+index ::= LBRACK block RBRACK
 exprs ::= expr? (SEMI expr)*
-empty ::= // empty statement
+amend ::= DOT LBRACK block RBRACK
+cond ::= COLON LBRACK block RBRACK
 ifStmt ::= IF LBRACK block RBRACK
 doStmt ::= DO LBRACK block RBRACK
 whileStmt ::= WHILE LBRACK block RBRACK
-

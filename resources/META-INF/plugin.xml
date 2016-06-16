@@ -23,7 +23,8 @@
   <extensions defaultExtensionNs="com.intellij">
       <fileTypeFactory implementation="com.x1010data.intellik.KFileTypeFactory"/>
       <lang.parserDefinition language="K" implementationClass="com.x1010data.intellik.KParserDefinition"/>
-      <lang.syntaxHighlighterFactory key="K" implementationClass="com.x1010data.intellik.KSyntaxHighlighterFactory"/>
+      <lang.syntaxHighlighterFactory key="K" language="K"
+                                     implementationClass="com.x1010data.intellik.KSyntaxHighlighterFactory"/>
       <colorSettingsPage implementation="com.x1010data.intellik.KColorSettingsPage"/>
   </extensions>
 
