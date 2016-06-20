@@ -27,6 +27,7 @@
                                      implementationClass="com.x1010data.intellik.KSyntaxHighlighterFactory"/>
       <colorSettingsPage implementation="com.x1010data.intellik.KColorSettingsPage"/>
       <completion.contributor language="K" implementationClass="com.x1010data.intellik.KCompletionContributor"/>
+      <lang.psiStructureViewFactory language="K" implementationClass="com.x1010data.intellik.KStructureViewFactory"/> 
   </extensions>
 
   <actions>
