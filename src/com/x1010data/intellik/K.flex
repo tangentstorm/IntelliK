@@ -47,9 +47,7 @@ DO         = "do"
 WHILE      = "while"
 IDENT      = {Alpha} ({Alpha}|{Digit}|"_")*
 
-// STRING     = "\"" ([\\].|[^\"])* "\""
-ESCAPE=\\[^\r\n]
-STRING=\"([^\\\"\r\n]|{ESCAPE}|(\\[\r\n]))*?(\"|\\)?
+STRING     = \" ("\\"[^\r\n]|[^\"\\])* \"
 SYM        = "`" ({IDENT} | {STRING})?
 
 // INLINE means that the / character behaves as an adverb (unlike INLINE, where it starts a comment)
