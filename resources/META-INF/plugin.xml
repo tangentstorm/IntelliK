@@ -1,8 +1,8 @@
 <idea-plugin version="2">
   <id>com.x1010data.intellik</id>
-  <name>K Plugin</name>
+  <name>K Language</name>
   <version>1.0</version>
-  <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+  <vendor url="https://github.com/sabren/IntelliK">Michal Wallace</vendor>
 
   <description><![CDATA[
         Plugin for the K programming language (version 3).
@@ -13,15 +13,15 @@
     ]]>
   </change-notes>
 
-  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-  <idea-version since-build="141.0"/>
+  <!-- since-build/until-build are set by the Gradle build (see build.gradle.kts). -->
 
   <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
        on how to target different products -->
   <depends>com.intellij.modules.lang</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-      <fileTypeFactory implementation="com.x1010data.intellik.KFileTypeFactory"/>
+      <fileType name="K Language Source File" language="K" extensions="k"
+                implementationClass="com.x1010data.intellik.KFileType" fieldName="INSTANCE"/>
       <lang.parserDefinition language="K" implementationClass="com.x1010data.intellik.KParserDefinition"/>
       <lang.syntaxHighlighterFactory key="K" language="K"
                                      implementationClass="com.x1010data.intellik.KSyntaxHighlighterFactory"/>
@@ -29,9 +29,5 @@
       <completion.contributor language="K" implementationClass="com.x1010data.intellik.KCompletionContributor"/>
       <lang.psiStructureViewFactory language="K" implementationClass="com.x1010data.intellik.KStructureViewFactory"/> 
   </extensions>
-
-  <actions>
-    <!-- Add your actions here -->
-  </actions>
 
 </idea-plugin>

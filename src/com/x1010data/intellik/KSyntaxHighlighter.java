@@ -5,7 +5,6 @@ import com.intellij.openapi.editor.DefaultLanguageHighlighterColors;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.tree.IElementType;
-import com.sun.jna.platform.unix.X11;
 import com.x1010data.intellik.psi.KTypes;
 import org.jetbrains.annotations.NotNull;
 
