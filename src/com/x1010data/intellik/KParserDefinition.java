@@ -75,7 +75,7 @@ public class KParserDefinition implements ParserDefinition {
     }
 
     @Override
-    public SpaceRequirements spaceExistanceTypeBetweenTokens(ASTNode astNode, ASTNode astNode1) {
+    public SpaceRequirements spaceExistenceTypeBetweenTokens(ASTNode astNode, ASTNode astNode1) {
         return SpaceRequirements.MAY;
     }
 }
