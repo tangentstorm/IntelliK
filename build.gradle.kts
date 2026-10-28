@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
     java
     id("org.jetbrains.intellij.platform") version "2.19.0"
@@ -15,7 +17,11 @@ repositories {
 dependencies {
     intellijPlatform {
         intellijIdea("2025.3")
+        testFramework(TestFrameworkType.Platform)
     }
+    testImplementation("junit:junit:4.13.2")
+    // The IntelliJ test framework needs opentest4j on the classpath even for JUnit 4 tests.
+    testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 java {
@@ -40,6 +46,10 @@ sourceSets {
         java.srcDir(tasks.generateLexer)
         resources.setSrcDirs(listOf("resources", "src"))
         resources.exclude("**/*.java", "**/*.bnf", "**/*.flex")
+    }
+    test {
+        java.setSrcDirs(listOf("test"))
+        resources.setSrcDirs(emptyList<String>())
     }
 }
 
