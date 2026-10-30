@@ -1,5 +1,8 @@
 package com.tangentcode.intellik.refactoring;
 
+import com.intellij.openapi.ui.TestDialogManager;
+import com.intellij.openapi.ui.TestInputDialog;
+import com.intellij.psi.PsiElement;
 import com.intellij.refactoring.util.CommonRefactoringUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
@@ -16,6 +19,15 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
         myFixture.configureByText("a.k", before);
         new KIntroduceVariableHandler((p, t, s, c) -> name)
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null);
+        myFixture.checkResult(after);
+    }
+
+    private void inline(String before, String after) {
+        myFixture.configureByText("a.k", before);
+        PsiElement target = myFixture.getElementAtCaret();
+        KInlineHandler h = new KInlineHandler();
+        assertTrue(h.canInlineElement(target));
+        h.inlineElement(getProject(), myFixture.getEditor(), target);
         myFixture.checkResult(after);
     }
 
@@ -134,4 +146,113 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "assignment");
     }
 
+    // ---- Inline Variable -----------------------------------------------------------------
+
+    public void testInlineVariableParenthesizesLeftOperandsOnly() {
+        inline("t<caret>:a+b\nr:t*2\ns:2*t\n", "r:(a+b)*2\ns:2*a+b\n");
+    }
+
+    public void testInlineAtomicValueFromUse() {
+        inline("t:5\nr:t<caret>*2\n", "r:5*2\n");
+    }
+
+    public void testInlineLocal() {
+        inline("f:{[a] t<caret>:a+1; t*t}\n", "f:{[a] (a+1)*a+1}\n");
+    }
+
+    public void testInlineParenthesizesNextToStrand() {
+        inline("t<caret>:3+4\nr:1 2 t\n", "r:1 2 (3+4)\n");
+    }
+
+    public void testInlineParenthesizesIndexedUseAndNegatives() {
+        inline("t<caret>:a,b\nr:t[0]\n", "r:(a,b)[0]\n");
+        inline("t<caret>:-1\nr:2-t\n", "r:2-(-1)\n");
+    }
+
+    public void testInlineRefusesReassigned() {
+        myFixture.configureByText("a.k", "t<caret>:1\nt:2\nr:t\n");
+        assertRefused(this::inlineAtCaret, "more than once");
+    }
+
+    public void testInlineRefusesIndexedAssignment() {
+        myFixture.configureByText("a.k", "t<caret>:1 2\nt[0]:5\nr:t\n");
+        assertRefused(this::inlineAtCaret, "indexed assignment");
+    }
+
+    public void testInlineRefusesModifiedInPlace() {
+        myFixture.configureByText("a.k", "t<caret>:1\nt+:1\nr:t\n");
+        assertRefused(this::inlineAtCaret, "modified in place");
+    }
+
+    public void testInlineRefusesWhenNameIsShadowedAtUse() {
+        myFixture.configureByText("a.k", "b:2\nt<caret>:b+1\nf:{b:5; t}\n");
+        assertRefused(this::inlineAtCaret, "means something else");
+    }
+
+    public void testInlineRefusesWhenDependencyIsReassigned() {
+        myFixture.configureByText("a.k", "a:1\nt<caret>:a+1\na:5\nr:t\n");
+        assertRefused(this::inlineAtCaret, "reassigned");
+    }
+
+    public void testInlineRefusesParameter() {
+        myFixture.configureByText("a.k", "f:{[a] a<caret>+1}\n");
+        assertRefused(this::inlineAtCaret, "Parameters");
+    }
+
+    private void inlineAtCaret() {
+        PsiElement target = myFixture.getElementAtCaret();
+        new KInlineHandler().inlineElement(getProject(), myFixture.getEditor(), target);
+    }
+
+    // ---- Inline Function -----------------------------------------------------------------
+
+    public void testInlineFunctionBracketAndMonadicCalls() {
+        inline("inc<caret>:{x+1}\nr:inc[5]\ns:2*inc 3\n", "r:5+1\ns:2*3+1\n");
+    }
+
+    public void testInlineFunctionParenthesizesArgsAndResult() {
+        inline("add<caret>:{[a;b] a+b}\nr:add[1-2;3]*2\n", "r:((1-2)+3)*2\n");
+    }
+
+    public void testInlineFunctionRefusesMultiStatementBody() {
+        myFixture.configureByText("a.k", "f<caret>:{t:x; t*2}\nr:f[1]\n");
+        assertRefused(this::inlineAtCaret, "single expression");
+    }
+
+    public void testInlineFunctionRefusesNonCallUse() {
+        myFixture.configureByText("a.k", "f<caret>:{x+1}\nr:f'1 2\n");
+        assertRefused(this::inlineAtCaret, "other than");
+    }
+
+    public void testInlineFunctionRefusesWrongArity() {
+        myFixture.configureByText("a.k", "f<caret>:{[a;b] a+b}\nr:f[1]\n");
+        assertRefused(this::inlineAtCaret, "takes 2");
+    }
+
+    public void testInlineFunctionRefusesDroppingAnArgument() {
+        myFixture.configureByText("a.k", "f<caret>:{[a;b] a}\nr:f[1;2+3]\n");
+        assertRefused(this::inlineAtCaret, "no longer be evaluated");
+    }
+
+    // ---- IDE actions are wired -----------------------------------------------------------
+
+    public void testStandardActionsReachTheHandlers() {
+        TestInputDialog old = TestDialogManager.setTestInputDialog(message -> "v");
+        try {
+            myFixture.configureByText("a.k", "r:2*<selection>a+b</selection>\n");
+            myFixture.performEditorAction("IntroduceVariable");
+            myFixture.checkResult("v:a+b\nr:2*v\n");
+
+            myFixture.configureByText("b.k", "q:2*<selection>c+d</selection>\n");
+            TestDialogManager.setTestInputDialog(message -> "g");
+            myFixture.performEditorAction("ExtractMethod");
+            myFixture.checkResult("g:{[] c+d}\nq:2*g[]\n");
+
+            myFixture.configureByText("c.k", "t<caret>:a+b\nr:t*2\n");
+            myFixture.performEditorAction("Inline");
+            myFixture.checkResult("r:(a+b)*2\n");
+        } finally {
+            TestDialogManager.setTestInputDialog(old);
+        }
+    }
 }
