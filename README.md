@@ -1,149 +1,90 @@
-# sabren/IntelliK
+# IntelliK
 
-> An IntelliJ IDEA plugin for the K programming language (v3),
-> written in June 2016. The lexer is the most thoughtful part; the
-> rest is a well-structured snapshot frozen mid-development — and it
-> cannot be built or installed from a fresh clone without regeneration
-> work.
-> Repo: https://github.com/sabren/IntelliK — private, default branch
-> `master`, 12 commits (2016-06-14 → 2016-06-19), all by Michal.
-> GitHub description: "K plugin for IntelliJ".
-> **Verdict: KEEP, document** (triage decision 2026-10-24; a full code
-> review already exists — see below).
+IntelliK is an IntelliJ Platform plugin for the [K](https://en.wikipedia.org/wiki/K_(programming_language))
+family of array languages.
 
-## What it is
+K3 is the only dialect supported today. The goal is to support several dialects from one shared
+lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k, oK and k9.
 
-A JetBrains "custom language" plugin built on the platform SDK's
-language-plugin architecture, following the canonical layout. Package
-`com.x1010data.intellik` — the K dialect here is the one associated
-with 1010data. Registered in `resources/META-INF/plugin.xml` (id
-`com.x1010data.intellik`, name "K Plugin", since-build **141.0** =
-IntelliJ IDEA 15, 2015-era platform). About 754 lines of hand-written
-code, plus a 95-line JFlex lexer definition and a 43-rule Grammar-Kit
-BNF grammar.
+## Features
 
-| Piece | File(s) | Notes |
-|---|---|---|
-| Language + file type (`.k`) | `KLanguage.java`, `KFileType.java`, `KFileTypeFactory.java` | Standard singletons |
-| Lexer | `K.flex` → generated `KLexer`, wrapped by `KLexerAdapter` | See lexer note below |
-| Grammar | `K.bnf` | Statements, lambdas `{[x;y] …}`, lists/dicts, `if`/`do`/`while`, amend/cond |
-| Parser wiring | `KParserDefinition.java` | References generated `parser.KParser` + `psi.KTypes` |
-| Syntax highlighting | `KSyntaxHighlighter.java`, `KSyntaxHighlighterFactory.java`, `KColorSettingsPage.java` | 15 token classes (comments, numbers, strings, symbols, prims, adverbs, builtins, …) |
-| Completion | `KCompletionContributor.java` | Stub — see findings |
-| Structure view | `KStructureViewFactory/Model/Element.java` | Empty — see findings |
+- Syntax highlighting for `.k` files. Colors for comments, numbers, strings, symbols, primitives,
+  adverbs, builtins, keywords, commands and brackets can be changed in
+  *Settings → Editor → Color Scheme → K*.
+- A parser for K3: statements, lambdas with signatures, lists, dicts, amend `.[...]`, conditional
+  `:[...]` and `if`/`do`/`while`. The lexer handles `/` and `\` being either a comment or command
+  (at the start of a line or after whitespace) or an adverb (after a token).
+- A structure view. It is only a skeleton so far: it shows the file node but no definitions yet.
+- Completion of the active dialect's builtins (`_bin`, `_sqrt`, ...) and keywords. The list comes
+  from the dialect's primitive table.
 
-## The lexer: the genuinely good part
+## Building and running
 
-K uses `/` both as comment-to-end-of-line and as an adverb, so
-`K.flex` runs a two-state machine: at `YYINITIAL` (start of a line /
-after whitespace) `/…` lexes as COMMENT and `\…` as COMMAND; after
-any "real" token it switches to the `INLINE` state where `/` and `\`
-lex as adverbs. That is the hard problem in K tooling, and it is
-handled correctly in principle. The BNF is compact but covers the
-language's core forms, including the `.[…]` amend and `:[…]`
-conditional syntax.
+You need JDK 21. The Gradle wrapper downloads everything else, including IntelliJ IDEA 2025.3,
+which the build targets (since-build 253).
 
-## Findings (from the code review)
+```sh
+./gradlew build        # generate the lexer/parser, compile, and run the tests
+./gradlew test         # run the tests only
+./gradlew runIde       # start a sandbox IDE with the plugin installed
+./gradlew buildPlugin  # package the plugin zip
+```
 
-1. **It cannot be compiled from a fresh clone — the generated sources
-   were never committed.** `KParserDefinition.java` imports
-   `com.x1010data.intellik.parser.KParser` and
-   `com.x1010data.intellik.psi.KTypes`; `psi/impl/KPsiImpUtil.java`
-   imports `psi.KItem`; `KStructureViewElement.java` imports
-   `psi.KDefine`; `KLexerAdapter.java` instantiates the
-   JFlex-generated `KLexer`. None of these exist in the repo.
-   `IntelliK.iml` declares a `gen` source folder for the
-   Grammar-Kit output — the folder is absent and isn't even in
-   `.gitignore`; it only ever existed on the author's machine.
-   Building requires regenerating the parser (Grammar-Kit on `K.bnf`)
-   and the lexer (JFlex on `K.flex`, using the bundled
-   `idea-flex.skeleton`) inside an IDEA with the Plugin DevKit.
-2. **`plugin.xml` still carries tutorial placeholder metadata:**
-   vendor "YourCompany", `support@yourcompany.com`,
-   `http://www.yourcompany.com`, version `1.0`, change-notes
-   "Initial version." It was never packaged for anyone else to
-   install; there is no built `.jar`/`.zip` in the repo.
-3. **Completion is a joke stub.** `KCompletionContributor` offers
-   exactly one completion for identifiers: the literal string
-   `"youCompleteMe"`. The author's own commit message says it
-   plainly: "added (extremely dumb) completion 'helper'".
-4. **The structure view is empty.** `KStructureViewElement.getChildren()`
-   has its real body commented out behind a `/* TODO … */` and
-   returns `EMPTY_ARRAY` unconditionally (commit: "added (empty)
-   structure view for K Files"). Relatedly, `getAlphaSortKey()` and
-   `getPresentation()` are annotated `@NotNull` but return `null`
-   for non-named elements — platform contract violations that can
-   throw inside the IDE.
-5. **Stray dead import:** `KSyntaxHighlighter.java` imports
-   `com.sun.jna.platform.unix.X11` and never uses it — leftover from
-   an edit, and the kind of thing that breaks compilation outside the
-   full platform classpath.
-6. **Era-locked build:** no Gradle/Maven — an IDEA `.idea` project
-   with a `PLUGIN_MODULE` DevKit module (`IntelliK.iml`). The modern
-   intellij-platform Gradle plugin workflow postdates this code.
-   `KParserDefinition.spaceExistanceTypeBetweenTokens` is a platform
-   method name that later platform versions changed/removed, so even
-   with the generated sources, a current IDEA would reject parts of
-   this API surface.
-7. **No tests, no README.** The only documentation is the code, the
-   grammar, and the commit log (which is refreshingly honest: "huge
-   pile of lexer/parser bugfixes", "simplified grammar…", "fix
-   KPsiImpUtil (KAssign no longer exists)").
+`./gradlew buildPlugin` writes the installable plugin zip to `build/distributions/`. To install it, use
+*Settings → Plugins → ⚙ → Install Plugin from Disk*.
 
-## Loading it today is a port, not an install
+The lexer (`K.flex`, JFlex) and the parser (`K.bnf`, Grammar-Kit) are generated on every build into
+`build/generated/` and are never committed. The grammar files are the source of truth.
 
-Even with an IDEA present, installing IntelliK "as-is" is not
-currently possible, for two independent reasons: there is nothing to
-install (no built plugin jar, and the sources don't compile until
-the Grammar-Kit/JFlex generated code is regenerated), and the plugin
-targets since-build 141 (IDEA 15, 2015) with a 2016 API surface that
-has since drifted. Realistically: recreate the project with the
-current intellij-platform Gradle plugin, regenerate parser/lexer, fix
-the API drift, then run it in the sandbox IDE. That is an afternoon
-of archaeology, not a double-click. (The review also notes IntelliJ
-IDEA is not installed on the VM where the review was done, so no
-install was attempted there.)
-
-## Tech stack
-
-Java, IntelliJ Platform SDK (DevKit module build, IDEA 15 era),
-JFlex (`idea-flex.skeleton` bundled), Grammar-Kit BNF. No
-Gradle/Maven, no license file, no tests.
-
-## Inventory
+## Project layout
 
 | Path | Contents |
-|------|----------|
-| `resources/META-INF/plugin.xml` | Plugin registration (id, name, since-build 141.0, YourCompany vendor) |
-| `src/com/x1010data/intellik/K.flex` | 95-line two-state lexer definition |
-| `src/com/x1010data/intellik/K.bnf` | 43-rule grammar |
-| `src/com/x1010data/intellik/*.java` | Language, file type, parser definition, highlighter, completion, structure view, lexer adapter |
-| `src/com/x1010data/intellik/psi/` | `KElementType`, `KFile`, `KTokenType`, `impl/KPsiImpUtil` |
-| `src/com/x1010data/intellik/icons/k-icon.png` | Plugin/file icon |
-| `idea-flex.skeleton` | JFlex skeleton for lexer generation |
-| `IntelliK.iml`, `.idea/` | IDEA DevKit module project (declares the absent `gen` folder) |
+|---|---|
+| `src/com/tangentcode/intellik/K.flex` | JFlex lexer definition |
+| `src/com/tangentcode/intellik/K.bnf` | Grammar-Kit grammar. It generates `parser.KParser` and the `psi` classes. |
+| `src/com/tangentcode/intellik/*.java` | Language, file type, parser definition, syntax highlighter, color settings page, completion, structure view |
+| `src/com/tangentcode/intellik/dialect/` | `KDialect`, `KDialectSettings`, `KDialectService`, `PrimitiveTable` |
+| `src/com/tangentcode/intellik/psi/` | Hand-written PSI support: element and token types, `KFile`, `impl/KPsiImpUtil` |
+| `resources/META-INF/plugin.xml` | Plugin registration |
+| `resources/dialects/<id>.json` | One primitive table per dialect. Only `k3.json` exists so far. |
+| `test/com/tangentcode/intellik/` | Lexer, parser, completion, dialect and structure view tests |
 
-## Surprising / notable
+## Dialects and primitive tables
 
-- **The commit log is the documentation, and it's honest.** Six days
-  of work, mostly lexer/parser bugfixing, ending with two wry
-  admissions — an "extremely dumb" completion helper and an "empty"
-  structure view. The plugin stopped exactly where the hard
-  infrastructure ended and the product features would have begun.
-- **The highlighter's token taxonomy matches K's actual lexical
-  structure** (primitives vs. builtins vs. adverbs vs. commands) —
-  the author knew the language, not just the SDK tutorial.
-- No linked streams or videos were found in the repo.
+- **`KDialect`** lists the dialects IntelliK knows about. Each has a stable id: `k3`, `q`, `kona`,
+  `ksharp`, `ngn`, `ok`, `k9`.
+- **`KDialectSettings`** is a project-level setting, saved in `.idea/intellik.xml`. It defaults to K3.
+  There is no settings UI yet.
+- **`KDialectService`** decides which dialect a file uses. For now that is always the project setting.
+  Planned additions are a per-file override, a `/ dialect: ...` header comment, and mapping the `.q`
+  extension to q.
+- **`PrimitiveTable`** loads `resources/dialects/<id>.json` for a dialect. A dialect without a file
+  gets an empty table. A table has four lists, and each entry has a `name` and an optional
+  `description`:
 
-## Related
+  ```json
+  {
+    "dialect": "k3",
+    "name": "K3",
+    "primitives": [{"name": "+", "description": ""}],
+    "adverbs":    [{"name": "/:", "description": ""}],
+    "builtins":   [{"name": "_sqrt", "description": ""}],
+    "keywords":   [{"name": "while", "description": ""}]
+  }
+  ```
 
-Full code review (2026-10-22, including the install-attempt
-verdict): `~/workspace/repo-curation/reviews/sabren-intellik-review.md`.
+  The lexer reads `builtins` to recognize builtin names. Completion offers `builtins` and
+  `keywords`. Glyph, adverb and keyword lexing rules are still written in `K.flex`, so in the table
+  those lists don't drive lexing yet.
 
-## Verdict
+To add a dialect, write `resources/dialects/<id>.json` for an id that `KDialect` already has.
 
-**Keep, document** (this file). The value is as a design record:
-the two-state lexer solution and the compact grammar are worth
-preserving, and the plugin's architecture is clean enough to port if
-K tooling is ever wanted again. It is not, in its current state, a
-working plugin — and this doc does not pretend otherwise.
+## History
+
+Michal Wallace started IntelliK in June 2016 as a K3 plugin, under the package
+`com.x1010data.intellik`. In 2026 it got a Gradle build, ports to the current IntelliJ APIs, tests,
+and the move to the `com.tangentcode.intellik` package.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
