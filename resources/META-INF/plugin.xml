@@ -1,8 +1,8 @@
 <idea-plugin version="2">
-  <id>com.x1010data.intellik</id>
+  <id>com.tangentcode.intellik</id>
   <name>K Language</name>
   <version>1.0</version>
-  <vendor url="https://github.com/tangentstorm/IntelliK">Michal Wallace</vendor>
+  <vendor url="https://tangentcode.com">Michal Wallace</vendor>
 
   <description><![CDATA[
         Support for the K family of array languages: syntax highlighting,
@@ -25,13 +25,13 @@
 
   <extensions defaultExtensionNs="com.intellij">
       <fileType name="K Language Source File" language="K" extensions="k"
-                implementationClass="com.x1010data.intellik.KFileType" fieldName="INSTANCE"/>
-      <lang.parserDefinition language="K" implementationClass="com.x1010data.intellik.KParserDefinition"/>
+                implementationClass="com.tangentcode.intellik.KFileType" fieldName="INSTANCE"/>
+      <lang.parserDefinition language="K" implementationClass="com.tangentcode.intellik.KParserDefinition"/>
       <lang.syntaxHighlighterFactory key="K" language="K"
-                                     implementationClass="com.x1010data.intellik.KSyntaxHighlighterFactory"/>
-      <colorSettingsPage implementation="com.x1010data.intellik.KColorSettingsPage"/>
-      <completion.contributor language="K" implementationClass="com.x1010data.intellik.KCompletionContributor"/>
-      <lang.psiStructureViewFactory language="K" implementationClass="com.x1010data.intellik.KStructureViewFactory"/> 
+                                     implementationClass="com.tangentcode.intellik.KSyntaxHighlighterFactory"/>
+      <colorSettingsPage implementation="com.tangentcode.intellik.KColorSettingsPage"/>
+      <completion.contributor language="K" implementationClass="com.tangentcode.intellik.KCompletionContributor"/>
+      <lang.psiStructureViewFactory language="K" implementationClass="com.tangentcode.intellik.KStructureViewFactory"/> 
   </extensions>
 
 </idea-plugin>

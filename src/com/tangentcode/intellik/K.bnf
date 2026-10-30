@@ -1,0 +1,43 @@
+{
+    parserClass="com.tangentcode.intellik.parser.KParser"
+    extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+    psiClassPrefix="K"
+    psiImplClassSuffix="Impl"
+    psiPackage="com.tangentcode.intellik.psi"
+    psiImplPackage="com.tangentcode.intellik.psi.impl"
+
+    elementTypeHolderClass="com.tangentcode.intellik.psi.KTypes"
+    elementTypeClass="com.tangentcode.intellik.psi.KElementType"
+    tokenTypeClass="com.tangentcode.intellik.psi.KTokenType"
+
+    psiImplUtilClass="com.tangentcode.intellik.psi.impl.KPsiImpUtil"
+}
+
+file ::= item*
+item ::= (line | cmd | NEWLINE)
+cmd  ::= COMMAND COMMENT? NEWLINE
+line ::= stmts? COMMENT? NEWLINE
+stmts ::= stmt? (SEMI stmt?)*
+block ::= item* stmts? // so we can have stuff on the last line, before the end brace/bracket/whatever
+stmt ::= ifStmt | doStmt | whileStmt | define | expr | // last is empty statement
+define ::= lvalue COLON expr
+expr ::= (amend | cond | value | op+ | LPAREN expr RPAREN | ADV)+
+op ::= (PRIM | BUILTIN | DOT | COLON | MINUS | IDENT) tail
+value ::= lvalue | ((lambda | noun) tail)
+lvalue ::= IDENT tail
+lambda ::= LBRACE sig? block RBRACE
+sig ::= LBRACK (IDENT (SEMI IDENT)*)? RBRACK
+noun ::= STRING | (num+) | (SYM+) | list | dict
+num ::= MINUS? (INT | RAT)
+list ::= LPAREN block RPAREN
+dict ::= DOT LPAREN entry* RPAREN
+entry ::= LPAREN expr SEMI expr (SEMI expr?)? RPAREN
+tail ::= (attr | index | ADV)*
+attr ::= DOT IDENT
+index ::= LBRACK block RBRACK
+amend ::= DOT LBRACK block RBRACK
+cond ::= COLON LBRACK block RBRACK
+ifStmt ::= IF LBRACK block RBRACK
+doStmt ::= DO LBRACK block RBRACK
+whileStmt ::= WHILE LBRACK block RBRACK
