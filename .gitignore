@@ -6,3 +6,7 @@
 build/
 gen/
 .intellijPlatform/
+
+# IDE project files: the Gradle build is the source of truth.
+.idea/
+*.iml

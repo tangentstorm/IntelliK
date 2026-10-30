@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.intellij.platform.grammarkit") version "2.19.0"
 }
 
-group = "com.x1010data"
+group = "com.tangentcode"
 version = "1.0"
 
 repositories {
@@ -32,10 +32,10 @@ java {
 // committed, so the grammar files stay the single source of truth.
 tasks {
     generateParser {
-        sourceFile = file("src/com/x1010data/intellik/K.bnf")
+        sourceFile = file("src/com/tangentcode/intellik/K.bnf")
     }
     generateLexer {
-        sourceFile = file("src/com/x1010data/intellik/K.flex")
+        sourceFile = file("src/com/tangentcode/intellik/K.flex")
     }
 }
 
