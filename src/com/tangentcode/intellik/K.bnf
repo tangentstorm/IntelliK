@@ -21,13 +21,22 @@ line ::= stmts? COMMENT? NEWLINE
 stmts ::= stmt? (SEMI stmt?)*
 block ::= item* stmts? // so we can have stuff on the last line, before the end brace/bracket/whatever
 stmt ::= ifStmt | doStmt | whileStmt | define | expr | // last is empty statement
-define ::= lvalue COLON expr
+define ::= lvalue COLON expr {
+  mixin="com.tangentcode.intellik.psi.impl.KDefineMixin"
+  implements="com.tangentcode.intellik.psi.KNamedElement"
+}
 expr ::= (amend | cond | value | op+ | LPAREN expr RPAREN | ADV)+
-op ::= (PRIM | BUILTIN | DOT | COLON | MINUS | IDENT) tail
+op ::= (PRIM | BUILTIN | DOT | COLON | MINUS | nameRef) tail
 value ::= lvalue | ((lambda | noun) tail)
-lvalue ::= IDENT tail
+lvalue ::= nameRef tail
+// An identifier used as a value or assignment target. Carries the reference.
+nameRef ::= IDENT { mixin="com.tangentcode.intellik.psi.impl.KNameRefMixin" }
 lambda ::= LBRACE sig? block RBRACE
-sig ::= LBRACK (IDENT (SEMI IDENT)*)? RBRACK
+sig ::= LBRACK (param (SEMI param)*)? RBRACK
+param ::= IDENT {
+  mixin="com.tangentcode.intellik.psi.impl.KParamMixin"
+  implements="com.tangentcode.intellik.psi.KNamedElement"
+}
 noun ::= STRING | (num+) | (SYM+) | list | dict
 num ::= MINUS? (INT | RAT)
 list ::= LPAREN block RPAREN

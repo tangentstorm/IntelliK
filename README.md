@@ -14,9 +14,23 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
 - A parser for K3: statements, lambdas with signatures, lists, dicts, amend `.[...]`, conditional
   `:[...]` and `if`/`do`/`while`. The lexer handles `/` and `\` being either a comment or command
   (at the start of a line or after whitespace) or an adverb (after a token).
-- A structure view. It is only a skeleton so far: it shows the file node but no definitions yet.
-- Completion of the active dialect's builtins (`_bin`, `_sqrt`, ...) and keywords. The list comes
-  from the dialect's primitive table.
+- A structure view listing a file's top-level definitions.
+- Go to declaration (Ctrl+B / Ctrl+click), with K3 scoping:
+  - Inside a lambda, a name is first looked up among the lambda's parameters (`{[a;b] ...}`), or
+    the implicit `x`, `y` and `z` when it has no signature. Implicit parameters go to the lambda.
+  - Next come names assigned in that same lambda. `name:expr` inside a lambda is local, while
+    `name::expr` assigns a global.
+  - K3 has no closures, so a nested lambda doesn't see the enclosing lambda's locals.
+  - Otherwise a name refers to a global: an assignment outside any lambda, or a `name::expr`
+    anywhere. The current file is searched first, then the other `.k` files in the project.
+  - The first assignment of a name is its declaration, and later assignments (including indexed
+    ones like `a[i]:v`) count as uses.
+- Rename (in place or with the dialog), Find Usages, and highlighting of a name's uses in the
+  file. Rename accepts only valid K identifiers and refuses keywords and builtins.
+- Completion of the active dialect's builtins (`_bin`, `_sqrt`, ...) and keywords, from the
+  dialect's primitive table. Completion also offers the names visible at the caret.
+- Not yet supported: dotted names (`.k.foo`, `a.b`), names written as symbols (`` `a ``), and
+  K3 directories (`\d`).
 
 ## Building and running
 
@@ -42,12 +56,12 @@ The lexer (`K.flex`, JFlex) and the parser (`K.bnf`, Grammar-Kit) are generated 
 |---|---|
 | `src/com/tangentcode/intellik/K.flex` | JFlex lexer definition |
 | `src/com/tangentcode/intellik/K.bnf` | Grammar-Kit grammar. It generates `parser.KParser` and the `psi` classes. |
-| `src/com/tangentcode/intellik/*.java` | Language, file type, parser definition, syntax highlighter, color settings page, completion, structure view |
+| `src/com/tangentcode/intellik/*.java` | Language, file type, parser definition, syntax highlighter, color settings page, completion, structure view, name resolution (`KResolver`, `KReference`), find usages and rename support |
 | `src/com/tangentcode/intellik/dialect/` | `KDialect`, `KDialectSettings`, `KDialectService`, `PrimitiveTable` |
-| `src/com/tangentcode/intellik/psi/` | Hand-written PSI support: element and token types, `KFile`, `impl/KPsiImpUtil` |
+| `src/com/tangentcode/intellik/psi/` | Hand-written PSI support: element and token types, `KFile`, `KNamedElement`, `KElementFactory`, and the mixins in `impl/` for assignments, parameters and name references |
 | `resources/META-INF/plugin.xml` | Plugin registration |
 | `resources/dialects/<id>.json` | One primitive table per dialect. Only `k3.json` exists so far. |
-| `test/com/tangentcode/intellik/` | Lexer, parser, completion, dialect and structure view tests |
+| `test/com/tangentcode/intellik/` | Lexer, parser, completion, dialect, structure view, resolve and refactoring tests |
 
 ## Dialects and primitive tables
 

@@ -8,7 +8,6 @@ import com.intellij.navigation.ItemPresentation;
 import com.intellij.navigation.NavigationItem;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.tangentcode.intellik.psi.KDefine;
 import com.tangentcode.intellik.psi.KFile;
 import org.jetbrains.annotations.NotNull;
@@ -61,15 +60,13 @@ public class KStructureViewElement implements StructureViewTreeElement, Sortable
     @NotNull
     @Override
     public TreeElement[] getChildren() {
-        /* TODO if (element instanceof KFile) {
-            KDefine[] defs = PsiTreeUtil.getChildrenOfType(element, KDefine.class);
-            List<TreeElement> els = new ArrayList<>(defs.length);
-            for (KDefine def : defs) {
+        if (element instanceof KFile file) {
+            List<TreeElement> els = new ArrayList<>();
+            for (KDefine def : KResolver.fileGlobals(file).values()) {
                 els.add(new KStructureViewElement(def));
             }
-            return els.toArray(new TreeElement[els.size()]);
-        } else
-        */
+            return els.toArray(TreeElement.EMPTY_ARRAY);
+        }
         return EMPTY_ARRAY;
     }
 }
