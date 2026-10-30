@@ -2,17 +2,36 @@ package com.tangentcode.intellik;
 
 import com.intellij.lang.refactoring.RefactoringSupportProvider;
 import com.intellij.psi.PsiElement;
+import com.intellij.refactoring.RefactoringActionHandler;
+import com.tangentcode.intellik.refactoring.KExtractFunctionHandler;
+import com.tangentcode.intellik.refactoring.KIntroduceVariableHandler;
 import com.tangentcode.intellik.psi.KNamedElement;
 import com.tangentcode.intellik.psi.impl.KNamedElementBase;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** Enables in-place rename: locals and parameters as local variables, globals as members. */
+/**
+ * Wires K into the IDE's refactoring actions: in-place rename (locals and parameters as local
+ * variables, globals as members), Extract Function (Ctrl+Alt+M) and Introduce
+ * Variable (Ctrl+Alt+V). Inline (Ctrl+Alt+N) is registered separately as an inlineActionHandler.
+ */
 public class KRefactoringSupportProvider extends RefactoringSupportProvider {
 
     @Override
     public boolean isInplaceRenameAvailable(@NotNull PsiElement element, @Nullable PsiElement context) {
         return element instanceof KNamedElementBase named && named.getLocalScope() != null;
+    }
+
+    @Nullable
+    @Override
+    public RefactoringActionHandler getExtractMethodHandler() {
+        return new KExtractFunctionHandler();
+    }
+
+    @Nullable
+    @Override
+    public RefactoringActionHandler getIntroduceVariableHandler() {
+        return new KIntroduceVariableHandler();
     }
 
     @Override
