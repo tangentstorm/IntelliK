@@ -5,6 +5,8 @@ import com.intellij.openapi.editor.DefaultLanguageHighlighterColors;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.tree.IElementType;
+import com.x1010data.intellik.dialect.KDialect;
+import com.x1010data.intellik.dialect.PrimitiveTable;
 import com.x1010data.intellik.psi.KTypes;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,11 +63,21 @@ public class KSyntaxHighlighter extends SyntaxHighlighterBase {
     private static final TextAttributesKey[] DOT_KEYS = new TextAttributesKey[]{DOT};
     private static final TextAttributesKey[] EMPTY_KEYS = new TextAttributesKey[0];
 
+    private final PrimitiveTable table;
+
+    public KSyntaxHighlighter() {
+        this(PrimitiveTable.forDialect(KDialect.DEFAULT));
+    }
+
+    public KSyntaxHighlighter(@NotNull PrimitiveTable table) {
+        this.table = table;
+    }
+
 
     @NotNull
     @Override
     public Lexer getHighlightingLexer() {
-        return new KLexerAdapter();
+        return new KLexerAdapter(table);
     }
 
     @NotNull

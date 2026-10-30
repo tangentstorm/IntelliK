@@ -12,6 +12,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.TokenType;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.psi.tree.TokenSet;
+import com.x1010data.intellik.dialect.KDialectService;
 import com.x1010data.intellik.parser.KParser;
 import com.x1010data.intellik.psi.KFile;
 import com.x1010data.intellik.psi.KTypes;
@@ -33,7 +34,7 @@ public class KParserDefinition implements ParserDefinition {
     @NotNull
     @Override
     public Lexer createLexer(Project project) {
-        return new KLexerAdapter();
+        return new KLexerAdapter(KDialectService.tableFor(project, null));
     }
 
     @Override

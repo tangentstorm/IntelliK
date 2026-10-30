@@ -5,6 +5,8 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.TokenType;
 
 import com.x1010data.intellik.psi.KTypes;
+import com.x1010data.intellik.dialect.KDialect;
+import com.x1010data.intellik.dialect.PrimitiveTable;
 
 %%
 
@@ -15,6 +17,16 @@ import com.x1010data.intellik.psi.KTypes;
 %type IElementType
 %eof{  return;
 %eof}
+
+%{
+  // Built-in names (_bin, _sqrt, ...) come from the dialect's primitive table.
+  private PrimitiveTable table = PrimitiveTable.forDialect(KDialect.DEFAULT);
+
+  public KLexer(PrimitiveTable table) {
+    this((java.io.Reader) null);
+    this.table = table;
+  }
+%}
 
 Digit      = [0-9]
 Alpha      = [a-zA-Z]
@@ -38,9 +50,7 @@ PRIM       = ([~!@#$%\^&*+<>|,?=_] ":"?) | ({Digit} ":") // [;:.\-] are also pri
 ADV        = "'" | "':" | "/:" | "\\:"
 INT        = {Nat} // handle negatives in the parser
 RAT        = {INT}\.{Nat}
-BUILTIN    = "_" ("bin"|"di"|"dv"|"dvl"|"draw"|"gtime"|"ic"|"ci"|"jd"|"dj"|"lsq"|"dot"|"mul"|"inv"|"in"|"lin"
-                 |"sv"|"sm"|"ss"|"ssr"|"vs"|"abs"|"floor"|"sin"|"cos"|"tan"|"sinh"|"cosh"|"tanh"
-                 |"exp"|"log"|"sqr"|"sqrt")
+SYSNAME    = "_" {Alpha}+  // a builtin if the dialect's table says so, else "_" is a primitive
 
 IF         = "if"
 DO         = "do"
@@ -73,7 +83,10 @@ SYM        = "`" ({IDENT} | {STRING})?
 {DO}                                       { yybegin(YYINITIAL); return KTypes.DO; }
 {WHILE}                                    { yybegin(YYINITIAL); return KTypes.WHILE; }
 
-{BUILTIN}                                  { yybegin(INLINE); return KTypes.BUILTIN; }
+{SYSNAME}                                  { yybegin(INLINE);
+                                             int n = table.longestBuiltinPrefix(yytext());
+                                             if (n > 0) { yypushback(yylength() - n); return KTypes.BUILTIN; }
+                                             yypushback(yylength() - 1); return KTypes.PRIM; }
 {IDENT}                                    { yybegin(INLINE); return KTypes.IDENT; }
 
 {STRING}                                   { yybegin(INLINE); return KTypes.STRING; }
