@@ -27,6 +27,7 @@ public class KStructureViewModel extends StructureViewModelBase implements Struc
 
     @Override
     public boolean isAlwaysLeaf(StructureViewTreeElement el) {
-        return el instanceof KFile;
+        // Only the file node can have children; everything below it is a leaf.
+        return !(el.getValue() instanceof KFile);
     }
 }

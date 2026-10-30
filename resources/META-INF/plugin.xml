@@ -2,10 +2,14 @@
   <id>com.x1010data.intellik</id>
   <name>K Language</name>
   <version>1.0</version>
-  <vendor url="https://github.com/sabren/IntelliK">Michal Wallace</vendor>
+  <vendor url="https://github.com/tangentstorm/IntelliK">Michal Wallace</vendor>
 
   <description><![CDATA[
-        Plugin for the K programming language (version 3).
+        Support for the K family of array languages: syntax highlighting,
+        parsing, structure view and completion of built-in primitives.
+        <p>The plugin is being built out to support several K dialects
+        (k3, q/k4, Kona, ngn/k, oK, K#, k9) from one shared lexer and
+        per-dialect primitive tables. Today, K3 is the supported dialect.</p>
     ]]></description>
 
   <change-notes><![CDATA[

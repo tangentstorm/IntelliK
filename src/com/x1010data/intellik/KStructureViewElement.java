@@ -1,5 +1,6 @@
 package com.x1010data.intellik;
 
+import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.structureView.StructureViewTreeElement;
 import com.intellij.ide.util.treeView.smartTree.SortableTreeElement;
 import com.intellij.ide.util.treeView.smartTree.TreeElement;
@@ -46,13 +47,15 @@ public class KStructureViewElement implements StructureViewTreeElement, Sortable
     @NotNull
     @Override
     public String getAlphaSortKey() {
-        return element instanceof PsiNamedElement ? ((PsiNamedElement) element).getName() : null;
+        String name = element instanceof PsiNamedElement ? ((PsiNamedElement) element).getName() : null;
+        return name != null ? name : "";
     }
 
     @NotNull
     @Override
     public ItemPresentation getPresentation() {
-        return element instanceof NavigationItem ? ((NavigationItem) element).getPresentation() : null;
+        ItemPresentation p = element instanceof NavigationItem ? ((NavigationItem) element).getPresentation() : null;
+        return p != null ? p : new PresentationData(getAlphaSortKey(), null, null, null);
     }
 
     @NotNull

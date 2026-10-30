@@ -24,6 +24,7 @@ public class KParserDefinition implements ParserDefinition {
 
     public static final TokenSet WHITE_SPACES = TokenSet.create(TokenType.WHITE_SPACE);
     public static final TokenSet COMMENTS = TokenSet.create(KTypes.COMMENT);
+    public static final TokenSet STRINGS = TokenSet.create(KTypes.STRING);
 
     public static final IFileElementType FILE =
             new IFileElementType(Language.<KLanguage>findInstance(KLanguage.class));
@@ -60,7 +61,7 @@ public class KParserDefinition implements ParserDefinition {
     @NotNull
     @Override
     public TokenSet getStringLiteralElements() {
-        return TokenSet.EMPTY;
+        return STRINGS;
     }
 
     @NotNull
