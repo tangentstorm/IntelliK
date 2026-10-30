@@ -3,6 +3,8 @@ package com.tangentcode.intellik.refactoring;
 import com.intellij.openapi.ui.TestDialogManager;
 import com.intellij.openapi.ui.TestInputDialog;
 import com.intellij.psi.PsiElement;
+import com.intellij.refactoring.BaseRefactoringProcessor;
+import com.intellij.refactoring.safeDelete.SafeDeleteHandler;
 import com.intellij.refactoring.util.CommonRefactoringUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
@@ -232,6 +234,30 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
     public void testInlineFunctionRefusesDroppingAnArgument() {
         myFixture.configureByText("a.k", "f<caret>:{[a;b] a}\nr:f[1;2+3]\n");
         assertRefused(this::inlineAtCaret, "no longer be evaluated");
+    }
+
+    // ---- Safe Delete ---------------------------------------------------------------------
+
+    public void testSafeDeleteUnusedLine() {
+        myFixture.configureByText("a.k", "t<caret>:1\nr:2\n");
+        SafeDeleteHandler.invoke(getProject(), new PsiElement[]{myFixture.getElementAtCaret()}, true);
+        myFixture.checkResult("r:2\n");
+    }
+
+    public void testSafeDeleteStatementInLine() {
+        myFixture.configureByText("a.k", "a:1; t<caret>:2; b:3\n");
+        SafeDeleteHandler.invoke(getProject(), new PsiElement[]{myFixture.getElementAtCaret()}, true);
+        myFixture.checkResult("a:1; b:3\n");
+    }
+
+    public void testSafeDeleteUsedReportsConflict() {
+        myFixture.configureByText("a.k", "t<caret>:1\nr:t\n");
+        try {
+            SafeDeleteHandler.invoke(getProject(), new PsiElement[]{myFixture.getElementAtCaret()}, true);
+            fail("expected a conflict");
+        } catch (BaseRefactoringProcessor.ConflictsInTestsException expected) {
+            // the use of t is reported
+        }
     }
 
     // ---- IDE actions are wired -----------------------------------------------------------
