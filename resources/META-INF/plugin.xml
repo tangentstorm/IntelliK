@@ -35,6 +35,7 @@
       <lang.findUsagesProvider language="K" implementationClass="com.tangentcode.intellik.KFindUsagesProvider"/>
       <lang.refactoringSupport language="K" implementationClass="com.tangentcode.intellik.KRefactoringSupportProvider"/>
       <lang.namesValidator language="K" implementationClass="com.tangentcode.intellik.KNamesValidator"/>
+      <inlineActionHandler implementation="com.tangentcode.intellik.refactoring.KInlineHandler"/>
   </extensions>
 
 </idea-plugin>

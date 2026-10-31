@@ -51,25 +51,30 @@ public final class KResolver {
 
     @Nullable
     private static PsiElement doResolve(@NotNull KNameRef ref) {
-        String name = ref.getText();
-        KLambda lambda = enclosingLambda(ref);
+        return resolveName(ref, ref.getText());
+    }
+
+    /** What {@code name} would refer to if written at {@code context}. */
+    @Nullable
+    public static PsiElement resolveName(@NotNull PsiElement context, @NotNull String name) {
+        KLambda lambda = enclosingLambda(context);
         if (lambda != null) {
             PsiElement local = lambdaScope(lambda).get(name);
             if (local != null) return local;
         }
-        PsiFile file = ref.getContainingFile();
+        PsiFile file = context.getContainingFile();
         KDefine global = fileGlobals(file).get(name);
         if (global != null) return global;
         return projectGlobal(file, name);
     }
 
-    /** Names visible from {@code ref}, for completion. */
+    /** Names visible at {@code context}, for completion. */
     @NotNull
-    public static Collection<String> visibleNames(@NotNull KNameRef ref) {
+    public static Collection<String> visibleNames(@NotNull PsiElement context) {
         Set<String> names = new LinkedHashSet<>();
-        KLambda lambda = enclosingLambda(ref);
+        KLambda lambda = enclosingLambda(context);
         if (lambda != null) names.addAll(lambdaScope(lambda).keySet());
-        names.addAll(fileGlobals(ref.getContainingFile()).keySet());
+        names.addAll(fileGlobals(context.getContainingFile()).keySet());
         return names;
     }
 
@@ -148,7 +153,8 @@ public final class KResolver {
     /** Does this assignment define a function, as in {@code f:{x+1}}? */
     public static boolean definesLambda(@NotNull KDefine d) {
         PsiElement first = d.getExpr().getFirstChild();
-        return first instanceof KValue v && v.getLambda() != null && v.getNextSibling() == null;
+        return first instanceof KValue v && v.getLambda() != null
+                && (v.getTail() == null || v.getTail().getTextLength() == 0) && v.getNextSibling() == null;
     }
 
     @NotNull

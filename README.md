@@ -27,6 +27,41 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
     ones like `a[i]:v`) count as uses.
 - Rename (in place or with the dialog), Find Usages, and highlighting of a name's uses in the
   file. Rename accepts only valid K identifiers and refuses keywords and builtins.
+- Refactorings, from the usual Refactor menu actions and shortcuts:
+  - **Extract Function** (Ctrl+Alt+M) works on a selected expression or on whole statements. It
+    creates a new function before the enclosing top-level statement and replaces the selection
+    with a call such as `name[a;b]`, or `name[]` when there are no parameters.
+    - Names that are parameters or locals of the enclosing lambda become parameters, in order of
+      first use. Globals stay as they are.
+    - With no parameters the function is `name:{...}`.
+    - With one to three parameters and **Use implicit x/y/z parameters** checked (the default),
+      the parameters are renamed to `x`, `y`, `z` and the signature is left out: `name:{x+y}`.
+      Unchecked, or with more than three parameters, the signature is explicit and keeps the
+      original names: `name:{[a;b] a+b}`.
+    - If the selection already uses `x`, `y` or `z` for something else (a global, or a local it
+      declares), the implicit form would change its meaning, so the signature is explicit
+      (`{[] ...}` when there are no parameters).
+  - **Introduce Variable** (Ctrl+Alt+V) puts `name:expr` just before the current statement, in the
+    same scope.
+  - **Inline Variable / Inline Function** (Ctrl+Alt+N) works on a name that is assigned once.
+    - A variable's value replaces every use.
+    - A function whose body is a single expression has each call `f[a;b]` (or `f a` for one
+      argument) replaced by its body, with the arguments substituted.
+    - The definition is then removed.
+  - **Safe Delete** works on an unused definition.
+
+  K evaluates right to left, so a complete subexpression is either a single term or the
+  right-hand end of an expression: in `a-b+c`, you can select `b+c`, `c` or `b`, but not `a-b`.
+  When inlining, the plugin adds parentheses where they are needed: when the inlined code becomes
+  a left operand, is indexed, or sits next to another value as in `1 2 (3+4)`. A refactoring that
+  would change behavior is refused with an explanation, for example:
+  - a local assigned in the selection is used after it;
+  - a name is reassigned or modified in place;
+  - a name would mean something else at its new location;
+  - a call doesn't match the function's parameters.
+
+  The plugin doesn't check side effects. Inlining can repeat or reorder evaluation, and Introduce
+  Variable evaluates its expression before the rest of the statement.
 - Completion of the active dialect's builtins (`_bin`, `_sqrt`, ...) and keywords, from the
   dialect's primitive table. Completion also offers the names visible at the caret.
 - Not yet supported: dotted names (`.k.foo`, `a.b`), names written as symbols (`` `a ``), and
