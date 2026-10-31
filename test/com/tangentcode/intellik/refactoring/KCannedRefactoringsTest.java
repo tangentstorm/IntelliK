@@ -11,8 +11,12 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 public class KCannedRefactoringsTest extends BasePlatformTestCase {
 
     private void extract(String before, String name, String after) {
+        extract(before, name, true, after);
+    }
+
+    private void extract(String before, String name, boolean implicit, String after) {
         myFixture.configureByText("a.k", before);
-        new KExtractFunctionHandler((p, t, s, c) -> name)
+        new KExtractFunctionHandler(KExtractFunctionChooser.fixed(name, implicit))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null);
         myFixture.checkResult(after);
     }
@@ -46,65 +50,127 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
 
     // ---- Extract Function ----------------------------------------------------------------
 
-    public void testExtractExpressionWithParamsAndLocals() {
+    public void testExtractTwoParamsBecomeImplicitXY() {
         extract("g:1\nf:{[a;b] c:a*2; <selection>b+c*g</selection>}\n", "h",
+                "g:1\nh:{x+y*g}\nf:{[a;b] c:a*2; h[b;c]}\n");
+    }
+
+    public void testExtractTwoParamsExplicitWhenOptionOff() {
+        extract("g:1\nf:{[a;b] c:a*2; <selection>b+c*g</selection>}\n", "h", false,
                 "g:1\nh:{[b;c] b+c*g}\nf:{[a;b] c:a*2; h[b;c]}\n");
     }
 
-    public void testExtractImplicitXBecomesExplicitParam() {
-        extract("f:{1+<selection>x*2</selection>}\n", "dbl", "dbl:{[x] x*2}\nf:{1+dbl[x]}\n");
+    public void testExtractThreeParamsBecomeImplicitXYZ() {
+        extract("f:{[a;b;c] <selection>c*a-b</selection>}\n", "h", "h:{x*y-z}\nf:{[a;b;c] h[c;a;b]}\n");
+    }
+
+    public void testExtractThreeParamsExplicitWhenOptionOff() {
+        extract("f:{[a;b;c] <selection>c*a-b</selection>}\n", "h", false, "h:{[c;a;b] c*a-b}\nf:{[a;b;c] h[c;a;b]}\n");
+    }
+
+    public void testExtractFourParamsStayExplicit() {
+        extract("f:{[a;b;c;d] <selection>a+b+c+d</selection>}\n", "h",
+                "h:{[a;b;c;d] a+b+c+d}\nf:{[a;b;c;d] h[a;b;c;d]}\n");
+    }
+
+    public void testExtractSingleParamRenamedToX() {
+        extract("a:1\nf:{a:2; <selection>a*a+3</selection>}\n", "g", "a:1\ng:{x*x+3}\nf:{a:2; g[a]}\n");
+    }
+
+    public void testExtractSingleParamExplicitWhenOptionOff() {
+        extract("a:1\nf:{a:2; <selection>a*3</selection>}\n", "g", false, "a:1\ng:{[a] a*3}\nf:{a:2; g[a]}\n");
+    }
+
+    public void testExtractSingleParamAlreadyX() {
+        extract("f:{1+<selection>x*2</selection>}\n", "dbl", "dbl:{x*2}\nf:{1+dbl[x]}\n");
+        extract("f:{1+<selection>x*2</selection>}\n", "dbl", false, "dbl:{[x] x*2}\nf:{1+dbl[x]}\n");
+    }
+
+    public void testExtractParamsSwappedIntoPosition() {
+        extract("f:{[x;y] <selection>y-x</selection>}\n", "g", "g:{x-y}\nf:{[x;y] g[y;x]}\n");
+    }
+
+    public void testExtractRenameSkipsNestedLambdaAndSymbols() {
+        // The nested lambda's own a and the symbol `a are not the parameter.
+        extract("f:{[a] <selection>a+{[a] a}[1],`a</selection>}\n", "g",
+                "g:{x+{[a] a}[1],`a}\nf:{[a] g[a]}\n");
+    }
+
+    public void testExtractSingleParamFallsBackWhenGlobalYUsed() {
+        // y is a global here; without a signature it would become a second implicit argument.
+        extract("y:5\nf:{[a] <selection>a+y</selection>}\n", "g", "y:5\ng:{[a] a+y}\nf:{[a] g[a]}\n");
+    }
+
+    public void testExtractTwoParamsFallBackWhenGlobalZUsed() {
+        extract("z:5\nf:{[a;b] <selection>a+b*z</selection>}\n", "g", "z:5\ng:{[a;b] a+b*z}\nf:{[a;b] g[a;b]}\n");
+    }
+
+    public void testExtractFallsBackWhenSelectionDeclaresX() {
+        extract("f:{[a] <selection>x:a+1\n  x*2</selection>}\n", "g", "g:{[a] x:a+1\n  x*2}\nf:{[a] g[a]}\n");
     }
 
     public void testExtractTopLevelExpressionHasNoParams() {
-        extract("a:1\nb:2*<selection>a+1</selection>\n", "inc", "a:1\ninc:{[] a+1}\nb:2*inc[]\n");
+        extract("a:1\nb:2*<selection>a+1</selection>\n", "inc", "a:1\ninc:{a+1}\nb:2*inc[]\n");
+        extract("a:1\nb:2*<selection>a+1</selection>\n", "inc", false, "a:1\ninc:{a+1}\nb:2*inc[]\n");
     }
 
-    public void testExtractLocalThatShadowsGlobalBecomesParam() {
-        extract("a:1\nf:{a:2; <selection>a*3</selection>}\n", "g", "a:1\ng:{[a] a*3}\nf:{a:2; g[a]}\n");
+    public void testExtractNiladicKeepsEmptySignatureWhenBodyUsesGlobalX() {
+        extract("x:1\nb:2*<selection>x+1</selection>\n", "inc", "x:1\ninc:{[] x+1}\nb:2*inc[]\n");
+    }
+
+    public void testExtractNiladicIgnoresXInNestedLambda() {
+        extract("b:<selection>{x+1}'1 2</selection>\n", "g", "g:{{x+1}'1 2}\nb:g[]\n");
     }
 
     public void testExtractSingleTermInMiddle() {
-        extract("r:1+<selection>(2*3)</selection>-4\n", "six", "six:{[] (2*3)}\nr:1+six[]-4\n");
+        extract("r:1+<selection>(2*3)</selection>-4\n", "six", "six:{(2*3)}\nr:1+six[]-4\n");
     }
 
     public void testExtractStatements() {
         extract("f:{[a] <selection>t:a+1\n  u:t*2\n  u-1</selection>}\n", "g",
-                "g:{[a] t:a+1\n  u:t*2\n  u-1}\nf:{[a] g[a]}\n");
+                "g:{t:x+1\n  u:t*2\n  u-1}\nf:{[a] g[a]}\n");
+    }
+
+    public void testExtractedImplicitFunctionInlinesBack() {
+        extract("f:{[a;b] <selection>b-a</selection>}\n", "g", "g:{x-y}\nf:{[a;b] g[b;a]}\n");
+        myFixture.getEditor().getCaretModel().moveToOffset(0);
+        new KInlineHandler().inlineElement(getProject(), myFixture.getEditor(), myFixture.getElementAtCaret());
+        myFixture.checkResult("f:{[a;b] b-a}\n");
     }
 
     public void testExtractRefusesLeftPrefix() {
         myFixture.configureByText("a.k", "r:<selection>a-b</selection>+c\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "g")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("g", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "complete expression");
     }
 
     public void testExtractRefusesLocalUsedAfterSelection() {
         myFixture.configureByText("a.k", "f:{[a] <selection>t:a+1</selection>; t*2}\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "g")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("g", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "used after");
     }
 
     public void testExtractRefusesAssignmentToOuterLocal() {
         myFixture.configureByText("a.k", "f:{[a] t:1; <selection>t:a</selection>; t}\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "g")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("g", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "declared outside");
     }
 
     public void testExtractRefusesGlobalAssign() {
         myFixture.configureByText("a.k", "f:{[a] <selection>g::a</selection>; 1}\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "h")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("h", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "::");
     }
 
     public void testExtractRefusesTakenName() {
         myFixture.configureByText("a.k", "a:1\nb:2*<selection>a+1</selection>\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "a")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("a", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "already defined");
     }
 
     public void testExtractRefusesWithoutSelection() {
         myFixture.configureByText("a.k", "b:2*a<caret>+1\n");
-        assertRefused(() -> new KExtractFunctionHandler((p, t, s, c) -> "g")
+        assertRefused(() -> new KExtractFunctionHandler(KExtractFunctionChooser.fixed("g", true))
                 .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "Select");
     }
 
@@ -272,7 +338,7 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
             myFixture.configureByText("b.k", "q:2*<selection>c+d</selection>\n");
             TestDialogManager.setTestInputDialog(message -> "g");
             myFixture.performEditorAction("ExtractMethod");
-            myFixture.checkResult("g:{[] c+d}\nq:2*g[]\n");
+            myFixture.checkResult("g:{c+d}\nq:2*g[]\n");
 
             myFixture.configureByText("c.k", "t<caret>:a+b\nr:t*2\n");
             myFixture.performEditorAction("Inline");

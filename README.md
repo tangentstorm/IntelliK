@@ -29,11 +29,18 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
   file. Rename accepts only valid K identifiers and refuses keywords and builtins.
 - Refactorings, from the usual Refactor menu actions and shortcuts:
   - **Extract Function** (Ctrl+Alt+M) works on a selected expression or on whole statements. It
-    creates `name:{[a;b] ...}` before the enclosing top-level statement and replaces the selection
-    with `name[a;b]`, or `name[]` when there are no parameters.
+    creates a new function before the enclosing top-level statement and replaces the selection
+    with a call such as `name[a;b]`, or `name[]` when there are no parameters.
     - Names that are parameters or locals of the enclosing lambda become parameters, in order of
       first use. Globals stay as they are.
-    - The new function always gets an explicit signature.
+    - With no parameters the function is `name:{...}`.
+    - With one to three parameters and **Use implicit x/y/z parameters** checked (the default),
+      the parameters are renamed to `x`, `y`, `z` and the signature is left out: `name:{x+y}`.
+      Unchecked, or with more than three parameters, the signature is explicit and keeps the
+      original names: `name:{[a;b] a+b}`.
+    - If the selection already uses `x`, `y` or `z` for something else (a global, or a local it
+      declares), the implicit form would change its meaning, so the signature is explicit
+      (`{[] ...}` when there are no parameters).
   - **Introduce Variable** (Ctrl+Alt+V) puts `name:expr` just before the current statement, in the
     same scope.
   - **Inline Variable / Inline Function** (Ctrl+Alt+N) works on a name that is assigned once.
