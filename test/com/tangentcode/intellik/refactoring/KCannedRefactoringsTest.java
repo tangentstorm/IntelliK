@@ -122,6 +122,23 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
         extract("b:<selection>{x+1}'1 2</selection>\n", "g", "g:{{x+1}'1 2}\nb:g[]\n");
     }
 
+    // K3 closures: names a nested lambda reads from the enclosing lambda become arguments.
+
+    public void testExtractInNestedLambdaPassesCapturedLocal() {
+        extract("f:{a:2; g:{<selection>a*x</selection>}; g 1}\n", "h", "h:{x*y}\nf:{a:2; g:{h[a;x]}; g 1}\n");
+        extract("f:{a:2; g:{<selection>a*x</selection>}; g 1}\n", "h", false, "h:{[a;x] a*x}\nf:{a:2; g:{h[a;x]}; g 1}\n");
+    }
+
+    public void testExtractKeepsNamesCapturedByNestedLambda() {
+        // {a+x} reads the new function's parameter a, so it can't be renamed to an implicit x.
+        extract("f:{[a;v] <selection>{a+x}'v</selection>}\n", "h", "h:{[a;v] {a+x}'v}\nf:{[a;v] h[a;v]}\n");
+    }
+
+    public void testExtractKeepsEmptySignatureWhenNestedLambdaReadsGlobalX() {
+        // Without [] the new function's implicit x would be captured by {[q] q+x}.
+        extract("x:1\nb:<selection>{[q] q+x}'1 2</selection>\n", "g", "x:1\ng:{[] {[q] q+x}'1 2}\nb:g[]\n");
+    }
+
     public void testExtractSingleTermInMiddle() {
         extract("r:1+<selection>(2*3)</selection>-4\n", "six", "six:{(2*3)}\nr:1+six[]-4\n");
     }
@@ -192,6 +209,16 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
         introduce("f:{[a] if[a>0; r:<selection>a-1</selection>]; r}\n", "t", "f:{[a] t:a-1; if[a>0; r:t]; r}\n");
     }
 
+    public void testIntroduceInsideNestedLambdaUsesCapturedLocal() {
+        introduce("f:{a:1; {x*<selection>a+1</selection>}}\n", "v", "f:{a:1; {v:a+1; x*v}}\n");
+    }
+
+    public void testIntroduceRefusesNameOfEnclosingLocal() {
+        myFixture.configureByText("a.k", "f:{total:1; {x*<selection>x+1</selection>}}\n");
+        assertRefused(() -> new KIntroduceVariableHandler((p, t, s, c) -> "total")
+                .invoke(getProject(), myFixture.getEditor(), myFixture.getFile(), null), "already defined");
+    }
+
     public void testIntroduceRefusesLeftPrefix() {
         myFixture.configureByText("a.k", "r:<selection>a-b</selection>+c\n");
         assertRefused(() -> new KIntroduceVariableHandler((p, t, s, c) -> "v")
@@ -237,6 +264,26 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
         inline("t<caret>:-1\nr:2-t\n", "r:2-(-1)\n");
     }
 
+    public void testInlineIntoNestedLambdaThatCapturesTheValuesNames() {
+        inline("f:{a:2; t<caret>:a+1; g:{t*x}; g 3}\n", "f:{a:2; g:{(a+1)*x}; g 3}\n");
+    }
+
+    public void testInlineRefusesWhenNestedLambdaHasItsOwnX() {
+        myFixture.configureByText("a.k", "f:{t<caret>:x+1; {t*x}'!3}\n");
+        assertRefused(this::inlineAtCaret, "means something else");
+    }
+
+    public void testInlineRefusesWhenLambdaInValueWouldCaptureALocal() {
+        myFixture.configureByText("a.k", "a:1\nt<caret>:{a+x}'!3\nf:{a:2; t}\n");
+        assertRefused(this::inlineAtCaret, "capture something else");
+    }
+
+    public void testInlineRefusesWhenItWouldLetANestedLambdaCapture() {
+        // g doesn't read a, so {a} sees the global a. After inlining, g reads f's a and {a} would capture it.
+        myFixture.configureByText("a.k", "a:0\nf:{a:1; t<caret>:a+1; g:{{a}[]+t}; g[]}\n");
+        assertRefused(this::inlineAtCaret, "nested lambda capture");
+    }
+
     public void testInlineRefusesReassigned() {
         myFixture.configureByText("a.k", "t<caret>:1\nt:2\nr:t\n");
         assertRefused(this::inlineAtCaret, "more than once");
@@ -280,6 +327,15 @@ public class KCannedRefactoringsTest extends BasePlatformTestCase {
 
     public void testInlineFunctionParenthesizesArgsAndResult() {
         inline("add<caret>:{[a;b] a+b}\nr:add[1-2;3]*2\n", "r:((1-2)+3)*2\n");
+    }
+
+    public void testInlineFunctionThatCapturesALocal() {
+        inline("f:{a:1; h<caret>:{x+a}; h[2]}\n", "f:{a:1; 2+a}\n");
+    }
+
+    public void testInlineFunctionRefusesParamReadInNestedLambda() {
+        myFixture.configureByText("a.k", "h<caret>:{[p] {p+x}'!3}\nr:h[5]\n");
+        assertRefused(this::inlineAtCaret, "nested in 'h'");
     }
 
     public void testInlineFunctionRefusesMultiStatementBody() {

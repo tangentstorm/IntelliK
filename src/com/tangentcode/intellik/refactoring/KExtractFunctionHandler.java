@@ -11,6 +11,7 @@ import com.intellij.psi.*;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.refactoring.RefactoringActionHandler;
 import com.tangentcode.intellik.KResolver;
+import com.tangentcode.intellik.dialect.KScoping;
 import com.tangentcode.intellik.psi.*;
 import com.tangentcode.intellik.psi.impl.KNamedElementBase;
 import org.jetbrains.annotations.NotNull;
@@ -170,15 +171,27 @@ public class KExtractFunctionHandler implements RefactoringActionHandler {
         for (int i = 0; i < names.size() && i < IMPLICIT.size(); i++) renames.put(params.get(names.get(i)), IMPLICIT.get(i));
         boolean bareOk = true;
         boolean implicitOk = !params.isEmpty() && params.size() <= IMPLICIT.size();
+        boolean closures = KResolver.scoping(root) != KScoping.LOCAL_OR_GLOBAL;
         List<KNameRef> toRename = new ArrayList<>();
         for (KNameRef ref : refs) {
-            if (KResolver.enclosingLambda(ref) != outer) continue;
             PsiElement target = KResolver.resolve(ref);
+            String head = ref.getText().split("\\.", 2)[0];
+            if (KResolver.enclosingLambda(ref) != outer) {
+                // In a lambda nested in the selection. With closures it may read a parameter of
+                // the new function (keep the parameter's name, so no implicit x/y/z), or read a
+                // global x/y/z that the new function's own implicit x/y/z would capture.
+                if (!closures || target != null && range.contains(target.getTextRange())) continue;
+                if (target != null && params.containsValue(target)) implicitOk = false;
+                else if (IMPLICIT.contains(head)) {
+                    bareOk = false;
+                    implicitOk = false;
+                }
+                continue;
+            }
             if (target != null && renames.containsKey(target)) {
                 toRename.add(ref);
                 continue;
             }
-            String head = ref.getText().split("\\.", 2)[0];
             if (IMPLICIT.contains(head)) {
                 bareOk = false;
                 implicitOk = false;

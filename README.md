@@ -36,7 +36,8 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
     creates a new function before the enclosing top-level statement and replaces the selection
     with a call such as `name[a;b]`, or `name[]` when there are no parameters.
     - Names that are parameters or locals of the enclosing lambda become parameters, in order of
-      first use. Globals stay as they are.
+      first use, including names a nested lambda captures from an enclosing one. The new function
+      never relies on a closure. Globals stay as they are.
     - With no parameters the function is `name:{...}`.
     - With one to three parameters and **Use implicit x/y/z parameters** checked (the default),
       the parameters are renamed to `x`, `y`, `z` and the signature is left out: `name:{x+y}`.
@@ -44,7 +45,9 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
       original names: `name:{[a;b] a+b}`.
     - If the selection already uses `x`, `y` or `z` for something else (a global, or a local it
       declares), the implicit form would change its meaning, so the signature is explicit
-      (`{[] ...}` when there are no parameters).
+      (`{[] ...}` when there are no parameters). The same goes when a lambda nested in the
+      selection reads a parameter or a global `x`, `y` or `z`, since it would capture the new
+      function's implicit ones.
   - **Introduce Variable** (Ctrl+Alt+V) puts `name:expr` just before the current statement, in the
     same scope.
   - **Inline Variable / Inline Function** (Ctrl+Alt+N) works on a name that is assigned once.
@@ -52,6 +55,9 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
     - A function whose body is a single expression has each call `f[a;b]` (or `f a` for one
       argument) replaced by its body, with the arguments substituted.
     - The definition is then removed.
+    - Inlining is refused if it would change what a nested lambda captures, either in the
+      inlined code or at the place it lands, or if it would move a function's argument into a
+      nested lambda.
   - **Safe Delete** works on an unused definition.
 
   K evaluates right to left, so a complete subexpression is either a single term or the

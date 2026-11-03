@@ -12,6 +12,7 @@ import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.tangentcode.intellik.KLanguage;
 import com.tangentcode.intellik.KResolver;
+import com.tangentcode.intellik.dialect.KScoping;
 import com.tangentcode.intellik.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -112,27 +113,78 @@ public class KInlineHandler extends InlineActionHandler {
 
     /**
      * Each name the moved code uses must mean the same thing at every destination. Names that
-     * resolve to {@code ownNames} (the function's own parameters) and names in nested lambdas
-     * are position independent.
+     * resolve to {@code ownNames} (the function's own parameters) or to declarations inside the
+     * code are position independent.
+     *
+     * <p>Names read inside lambdas nested in the code matter too when the dialect has closures:
+     * such a lambda captures from wherever the code lands, so what it sees there must be what it
+     * sees now. And in K3, code that reads a name at a destination lambda's own level lets that
+     * lambda's other nested lambdas capture the name, which must not change what they mean.
      */
     private static void checkFreeNames(String what, PsiElement code, Set<PsiElement> ownNames, List<KNameRef> uses) {
         KLambda home = KResolver.enclosingLambda(code);
+        KScoping scoping = KResolver.scoping(code);
+        Map<KNameRef, PsiElement> topLevel = new LinkedHashMap<>();
+        Map<KNameRef, PsiElement> nested = new LinkedHashMap<>();
         for (KNameRef r : PsiTreeUtil.findChildrenOfType(code, KNameRef.class)) {
             KLambda scope = KResolver.enclosingLambda(r);
-            if (scope != home && scope != null && PsiTreeUtil.isAncestor(code, scope, false)) continue;
+            boolean inNested = scope != home && scope != null && PsiTreeUtil.isAncestor(code, scope, false);
             PsiElement target = KResolver.resolve(r);
             if (target != null && ownNames.contains(target)) continue;
             if (target != null && PsiTreeUtil.isAncestor(code, target, false)) continue;
-            if (target instanceof KDefine d) {
-                for (PsiReference other : ReferencesSearch.search(d, d.getUseScope()).findAll()) {
-                    if (other.getElement() instanceof KNameRef o && isWrite(o)) {
-                        refuse("'" + what + "' uses '" + r.getText() + "', which is reassigned, so inlining could change its value.");
-                    }
-                }
-            }
+            if (inNested && scoping == KScoping.LOCAL_OR_GLOBAL) continue;
+            (inNested ? nested : topLevel).put(r, target);
+        }
+        Set<String> readHere = new HashSet<>();
+        for (KNameRef r : topLevel.keySet()) readHere.add(r.getText());
+
+        for (Map.Entry<KNameRef, PsiElement> e : topLevel.entrySet()) {
+            KNameRef r = e.getKey();
+            PsiElement target = e.getValue();
+            refuseIfReassigned(what, r, target);
             for (KNameRef use : uses) {
                 if (KResolver.resolveName(use, r.getText()) != target) {
                     refuse("'" + r.getText() + "' means something else where '" + what + "' is used.");
+                }
+            }
+        }
+        for (Map.Entry<KNameRef, PsiElement> e : nested.entrySet()) {
+            KNameRef r = e.getKey();
+            String name = r.getText();
+            PsiElement target = e.getValue();
+            refuseIfReassigned(what, r, target);
+            for (KNameRef use : uses) {
+                KLambda dest = KResolver.enclosingLambda(use);
+                PsiElement seen = KResolver.visibleInside(dest, name, scoping, readHere.contains(name) ? dest : null);
+                if (seen == null) seen = KResolver.resolveGlobal(use, name);
+                if (seen != target) {
+                    refuse("'" + r.getText() + "' in a lambda inside '" + what + "' would capture something else where '"
+                            + what + "' is used.");
+                }
+            }
+        }
+        if (scoping != KScoping.ONE_LEVEL) return;
+        for (String name : readHere) {
+            for (KNameRef use : uses) {
+                KLambda dest = KResolver.enclosingLambda(use);
+                if (dest == null || KResolver.ownReads(dest).contains(name)) continue;
+                for (KNameRef q : PsiTreeUtil.findChildrenOfType(dest.getBlock(), KNameRef.class)) {
+                    KLambda qScope = KResolver.enclosingLambda(q);
+                    if (qScope == dest || !q.getText().equals(name) || PsiTreeUtil.isAncestor(code, q, false)) continue;
+                    if (KResolver.resolveInLambdas(qScope, name, scoping, null)
+                            != KResolver.resolveInLambdas(qScope, name, scoping, dest)) {
+                        refuse("Inlining '" + what + "' would let a nested lambda capture '" + name + "', changing what it means.");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void refuseIfReassigned(String what, KNameRef r, @Nullable PsiElement target) {
+        if (target instanceof KDefine d) {
+            for (PsiReference other : ReferencesSearch.search(d, d.getUseScope()).findAll()) {
+                if (other.getElement() instanceof KNameRef o && isWrite(o)) {
+                    refuse("'" + what + "' uses '" + r.getText() + "', which is reassigned, so inlining could change its value.");
                 }
             }
         }
@@ -177,7 +229,15 @@ public class KInlineHandler extends InlineActionHandler {
         Map<String, List<KNameRef>> occurrences = new HashMap<>();
         for (KNameRef r : PsiTreeUtil.findChildrenOfType(body, KNameRef.class)) {
             PsiElement t = KResolver.resolve(r);
-            if (t != null && own.contains(t)) occurrences.computeIfAbsent(r.getText(), k -> new ArrayList<>()).add(r);
+            if (t != null && own.contains(t)) {
+                if (KResolver.enclosingLambda(r) != lambda) {
+                    // A nested lambda captures the parameter. Substituting the argument would move
+                    // its evaluation into that lambda, where its names may mean something else.
+                    refuse("'" + r.getText() + "' is read inside a lambda nested in '" + name
+                            + "', so its argument can't be substituted there.");
+                }
+                occurrences.computeIfAbsent(r.getText(), k -> new ArrayList<>()).add(r);
+            }
         }
 
         List<Edit> edits = new ArrayList<>();
