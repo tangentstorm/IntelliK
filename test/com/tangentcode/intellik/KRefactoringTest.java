@@ -35,6 +35,18 @@ public class KRefactoringTest extends BasePlatformTestCase {
         myFixture.checkResult("f:{[n;q] n+q}\ng:{[p] p}\n");
     }
 
+    public void testRenameLocalUpdatesNestedLambdaReads() {
+        myFixture.configureByText("a.k", "a:0\nf:{a<caret>:2; g:{a+x}; {{a}}; g a}\n");
+        myFixture.renameElementAtCaret("b");
+        myFixture.checkResult("a:0\nf:{b:2; g:{b+x}; {{a}}; g b}\n");
+    }
+
+    public void testRenameParamFromNestedLambda() {
+        myFixture.configureByText("a.k", "f:{[p] {p<caret>*x}'!p}\n");
+        myFixture.renameElementAtCaret("n");
+        myFixture.checkResult("f:{[n] {n*x}'!n}\n");
+    }
+
     public void testRenameLocalLeavesGlobalAlone() {
         myFixture.configureByText("a.k", "t:0\nf:{t<caret>:1; t*2}\ng:t\n");
         myFixture.renameElementAtCaret("u");
@@ -84,6 +96,25 @@ public class KRefactoringTest extends BasePlatformTestCase {
         Collection<UsageInfo> usages = myFixture.findUsages(myFixture.getElementAtCaret());
         // b:a+a (2), the reassignment a:2 (1), other.k (1); the lambda's local a is not a usage.
         assertEquals(4, usages.size());
+    }
+
+    public void testFindUsagesOfLocalIncludesNestedLambdaReads() {
+        myFixture.configureByText("a.k", "a:0\nf:{t<caret>:1; g:{t+x}; {{t}}; {t; {t}}; t}\n");
+        Collection<UsageInfo> usages = myFixture.findUsages(myFixture.getElementAtCaret());
+        // g's t, the middle lambda's t and its child's t, f's own t; not the grandchild in {{t}}.
+        assertEquals(4, usages.size());
+    }
+
+    public void testGotoDeclarationOfCapturedLocal() {
+        myFixture.configureByText("a.k", "f:{acc:0; {acc<caret>+x}'!3}\n");
+        myFixture.performEditorAction(IdeActions.ACTION_GOTO_DECLARATION);
+        assertEquals("f:{".length(), myFixture.getCaretOffset());
+    }
+
+    public void testCompletionOffersEnclosingLocals() {
+        myFixture.configureByText("a.k", "f:{total:0; {tot<caret>+x}}\n");
+        myFixture.completeBasic();
+        myFixture.checkResult("f:{total:0; {total+x}}\n");
     }
 
     public void testHighlightUsagesInFile() {

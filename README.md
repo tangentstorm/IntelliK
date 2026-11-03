@@ -20,7 +20,11 @@ lexer and parser, with a primitive table for each dialect: q/k4, Kona, K#, ngn/k
     the implicit `x`, `y` and `z` when it has no signature. Implicit parameters go to the lambda.
   - Next come names assigned in that same lambda. `name:expr` inside a lambda is local, while
     `name::expr` assigns a global.
-  - K3 has no closures, so a nested lambda doesn't see the enclosing lambda's locals.
+  - K3 has one level of closure. A nested lambda can read the parameters and locals of the
+    lambda it is written in. The values are copied in when the nested lambda is evaluated, and
+    assigning the name inside it makes a new local. A grandparent's names are visible only
+    when the lambda in between reads them too. Other dialects differ: q/k4 and ngn/k have no
+    closures, and oK has full lexical closures. IntelliK follows the dialect setting.
   - Otherwise a name refers to a global: an assignment outside any lambda, or a `name::expr`
     anywhere. The current file is searched first, then the other `.k` files in the project.
   - The first assignment of a name is its declaration, and later assignments (including indexed

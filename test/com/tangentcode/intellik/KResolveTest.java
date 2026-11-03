@@ -3,6 +3,8 @@ package com.tangentcode.intellik;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiReference;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.tangentcode.intellik.dialect.KDialect;
+import com.tangentcode.intellik.dialect.KDialectSettings;
 import com.tangentcode.intellik.psi.KDefine;
 import com.tangentcode.intellik.psi.KLambda;
 import com.tangentcode.intellik.psi.KParam;
@@ -63,8 +65,69 @@ public class KResolveTest extends BasePlatformTestCase {
         assertDefineAt(resolve(text), "g", text.indexOf("g::"));
     }
 
-    public void testNoClosuresNestedLambdaSeesGlobalNotEnclosingLocal() {
-        assertDefineAt(resolve("a:1\nf:{a:2; g:{a<caret>}}\n"), "a", 0);
+    // K3 closures: a nested lambda reads the enclosing lambda's names, one level up.
+
+    public void testNestedLambdaSeesEnclosingLocal() {
+        String text = "a:1\nf:{a:2; g:{a<caret>}}\n";
+        assertDefineAt(resolve(text), "a", text.indexOf("{a") + 1);
+    }
+
+    public void testNestedLambdaSeesEnclosingParam() {
+        PsiElement p = resolve("f:{[p] {p<caret>+x}}\n");
+        assertInstanceOf(p, KParam.class);
+        assertEquals("p", ((KParam) p).getName());
+    }
+
+    public void testNestedLambdaWithSignatureSeesEnclosingImplicitX() {
+        String text = "f:{{[a] a+x<caret>}}\n";
+        PsiElement target = resolve(text);
+        assertInstanceOf(target, KLambda.class);
+        assertEquals(text.indexOf("{"), target.getTextOffset());
+    }
+
+    public void testNestedLambdaWithoutSignatureHasItsOwnX() {
+        String text = "f:{[q] {x<caret>+q}}\nx:9\n";
+        PsiElement target = resolve(text);
+        assertInstanceOf(target, KLambda.class);
+        assertEquals(text.indexOf("{x"), target.getTextOffset());
+    }
+
+    public void testAssignmentInNestedLambdaMakesItsOwnLocal() {
+        String text = "f:{a:2; {a:3; a<caret>}}\n";
+        assertDefineAt(resolve(text), "a", text.indexOf("a:3"));
+    }
+
+    public void testGrandparentLocalIsOutOfReach() {
+        assertDefineAt(resolve("a:1\nf:{a:2; {{a<caret>}}}\n"), "a", 0);
+    }
+
+    public void testGrandparentLocalReadByTheMiddleLambdaIsVisible() {
+        String text = "a:1\nf:{a:2; {a; {a<caret>}}}\n";
+        assertDefineAt(resolve(text), "a", text.indexOf("{a:2") + 1);
+    }
+
+    public void testEnclosingLocalShadowsGlobalInNestedLambda() {
+        String text = "t:0\nf:{t:1; {t<caret>*x}'!3}\n";
+        assertDefineAt(resolve(text), "t", text.indexOf("t:1"));
+    }
+
+    public void testNoClosuresInQ() {
+        KDialectSettings.getInstance(getProject()).setDialect(KDialect.Q);
+        try {
+            assertDefineAt(resolve("a:1\nf:{a:2; g:{a<caret>}}\n"), "a", 0);
+        } finally {
+            KDialectSettings.getInstance(getProject()).setDialect(KDialect.DEFAULT);
+        }
+    }
+
+    public void testOkClosuresReachAnyDepth() {
+        KDialectSettings.getInstance(getProject()).setDialect(KDialect.OK);
+        try {
+            String text = "a:1\nf:{a:2; {{a<caret>}}}\n";
+            assertDefineAt(resolve(text), "a", text.indexOf("{a:2") + 1);
+        } finally {
+            KDialectSettings.getInstance(getProject()).setDialect(KDialect.DEFAULT);
+        }
     }
 
     public void testReassignmentRefersToFirstDeclaration() {
