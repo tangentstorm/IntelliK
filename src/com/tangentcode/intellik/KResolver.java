@@ -239,7 +239,8 @@ public final class KResolver {
     /** Does this assignment define a function, as in {@code f:{x+1}}? */
     public static boolean definesLambda(@NotNull KDefine d) {
         PsiElement first = d.getExpr().getFirstChild();
-        return first instanceof KValue v && v.getLambda() != null && v.getNextSibling() == null;
+        return first instanceof KValue v && v.getLambda() != null
+                && (v.getTail() == null || v.getTail().getTextLength() == 0) && v.getNextSibling() == null;
     }
 
     @NotNull
