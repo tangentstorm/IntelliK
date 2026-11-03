@@ -1,7 +1,7 @@
 <idea-plugin version="2">
   <id>com.tangentcode.intellik</id>
   <name>K Language</name>
-  <version>1.0</version>
+  <!-- version is set by the Gradle build from build.gradle.kts. -->
   <vendor url="https://tangentcode.com">Michal Wallace</vendor>
 
   <description><![CDATA[
