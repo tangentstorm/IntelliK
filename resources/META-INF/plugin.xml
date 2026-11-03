@@ -31,7 +31,10 @@
                                      implementationClass="com.tangentcode.intellik.KSyntaxHighlighterFactory"/>
       <colorSettingsPage implementation="com.tangentcode.intellik.KColorSettingsPage"/>
       <completion.contributor language="K" implementationClass="com.tangentcode.intellik.KCompletionContributor"/>
-      <lang.psiStructureViewFactory language="K" implementationClass="com.tangentcode.intellik.KStructureViewFactory"/> 
+      <lang.psiStructureViewFactory language="K" implementationClass="com.tangentcode.intellik.KStructureViewFactory"/>
+      <lang.findUsagesProvider language="K" implementationClass="com.tangentcode.intellik.KFindUsagesProvider"/>
+      <lang.refactoringSupport language="K" implementationClass="com.tangentcode.intellik.KRefactoringSupportProvider"/>
+      <lang.namesValidator language="K" implementationClass="com.tangentcode.intellik.KNamesValidator"/>
   </extensions>
 
 </idea-plugin>
